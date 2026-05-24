@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>첫 번째 단서 · 아이스브레이킹 질문 생성기</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@400;700;800&family=Gowun+Dodum&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#211a12; --gold:#e0b06a; --gold-bright:#f5d398; --gold-dim:#a98a55;
+    --ink:#efe6d2; --ink-dim:#c0b193; --ink-faint:#8a7c61;
+    --card-bg:#fdf5e2; --card-ink:#332a1b; --line:#473a28;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{
+    font-family:'Gowun Dodum',sans-serif;color:var(--ink);
+    min-height:100vh;overflow-x:hidden;
+    background:
+      radial-gradient(ellipse 60% 40% at 50% 0%, rgba(224,176,106,.28), transparent 70%),
+      linear-gradient(170deg,#2a2117 0%,#211a12 50%,#181109 100%);
+  }
+  .dunes{position:fixed;bottom:0;left:0;right:0;z-index:0;pointer-events:none;}
+  .wrap{position:relative;z-index:2;max-width:760px;margin:0 auto;padding:56px 22px 90px;}
+
+  header{text-align:center;margin-bottom:40px;}
+  .kicker{font-family:'Nanum Myeongjo',serif;letter-spacing:.46em;font-size:.74rem;
+    color:var(--gold-dim);text-transform:uppercase;margin-bottom:20px;}
+  h1{font-family:'Nanum Myeongjo',serif;font-weight:800;font-size:2.3rem;
+    color:var(--ink);letter-spacing:.03em;margin-bottom:12px;}
+  .sub{color:var(--ink-dim);font-size:.96rem;}
+
+  .panel{
+    background:linear-gradient(180deg,rgba(46,37,26,.9),rgba(33,26,18,.9));
+    border:1px solid var(--line);border-radius:6px;padding:30px 28px;margin-bottom:24px;
+    box-shadow:0 16px 40px rgba(0,0,0,.4);
+  }
+  .panel-label{font-family:'Nanum Myeongjo',serif;letter-spacing:.2em;font-size:.74rem;
+    color:var(--gold);margin-bottom:16px;}
+
+  .opt-group{margin-bottom:20px;}
+  .opt-group > .lbl{font-size:.86rem;color:var(--ink-dim);margin-bottom:9px;}
+  .chips{display:flex;flex-wrap:wrap;gap:9px;}
+  .chip{
+    padding:9px 16px;border:1px solid var(--line);border-radius:30px;
+    background:#191207;color:var(--ink-dim);cursor:pointer;font-size:.86rem;
+    font-family:'Gowun Dodum',sans-serif;transition:all .2s;
+  }
+  .chip:hover{border-color:var(--gold-dim);}
+  .chip.sel{background:linear-gradient(180deg,var(--gold-bright),var(--gold));
+    color:#2a1d09;border-color:var(--gold);font-weight:bold;}
+
+  .btn{
+    display:block;width:100%;padding:16px;margin-top:6px;
+    background:linear-gradient(180deg,var(--gold-bright),var(--gold));
+    color:#2a1d09;border:none;border-radius:5px;cursor:pointer;
+    font-family:'Nanum Myeongjo',serif;font-weight:800;font-size:1rem;
+    letter-spacing:.14em;transition:transform .2s,box-shadow .2s;
+  }
+  .btn:hover{transform:translateY(-2px);box-shadow:0 12px 28px rgba(224,176,106,.32);}
+  .btn.sm{background:none;border:1px solid var(--gold-dim);color:var(--gold);
+    font-size:.88rem;padding:12px;letter-spacing:.1em;}
+  .btn.sm:hover{background:rgba(224,176,106,.08);box-shadow:none;}
+
+  /* drawn cards */
+  #deck{margin-top:34px;}
+  .deck-head{text-align:center;font-family:'Nanum Myeongjo',serif;
+    color:var(--gold);letter-spacing:.2em;font-size:.9rem;margin-bottom:22px;}
+  .qcard{
+    background:linear-gradient(165deg,var(--card-bg),#f0e3c2);
+    color:var(--card-ink);border-radius:8px;padding:26px 26px 22px;
+    margin-bottom:16px;position:relative;
+    box-shadow:0 14px 30px rgba(0,0,0,.45);
+    border:1px solid #d6c393;
+    animation:flip .55s cubic-bezier(.2,.7,.3,1) backwards;
+  }
+  @keyframes flip{from{opacity:0;transform:rotateX(-32deg) translateY(20px);}
+    to{opacity:1;transform:none;}}
+  .qcard::after{content:"";position:absolute;inset:7px;border:1px dashed #c3ad79;
+    border-radius:5px;pointer-events:none;}
+  .qc-top{display:flex;justify-content:space-between;align-items:center;
+    margin-bottom:12px;}
+  .qc-num{font-family:'Nanum Myeongjo',serif;font-weight:800;font-size:1rem;
+    color:#b3863a;letter-spacing:.1em;}
+  .qc-tag{font-size:.7rem;background:#e7d6a8;color:#6d551f;
+    padding:3px 11px;border-radius:20px;letter-spacing:.05em;}
+  .qc-text{font-family:'Nanum Myeongjo',serif;font-size:1.18rem;line-height:1.7;
+    color:#2c2316;}
+  .qc-seal{position:absolute;right:16px;bottom:12px;font-size:.7rem;
+    color:#bda063;font-style:italic;}
+  .empty{text-align:center;color:var(--ink-faint);padding:30px;font-size:.9rem;}
+  @media(max-width:560px){
+    h1{font-size:1.8rem;}.wrap{padding:40px 14px 70px;}
+    .qc-text{font-size:1.05rem;}
+  }
+  @media print{
+    body{background:#fff;}header,.panel,.btn,.dunes{display:none!important;}
+    .qcard{box-shadow:none;page-break-inside:avoid;}
+  }
+</style>
+</head>
+<body>
+<svg class="dunes" viewBox="0 0 1440 200" preserveAspectRatio="none" height="160">
+  <path d="M0,120 Q360,60 720,110 T1440,90 V200 H0 Z" fill="#2c2317" opacity=".8"/>
+  <path d="M0,160 Q360,110 720,150 T1440,140 V200 H0 Z" fill="#241c12"/>
+</svg>
+<div class="wrap">
+
+  <header>
+    <div class="kicker">First Clue · 첫 번째 단서</div>
+    <h1>첫 번째 단서</h1>
+    <p class="sub">아이스브레이킹 질문 생성기 — 마음의 문을 여는 한 장의 카드</p>
+  </header>
+
+  <div class="panel">
+    <div class="panel-label">◇  카드를 뽑기 전에</div>
+
+    <div class="opt-group">
+      <div class="lbl">언제 사용하나요?</div>
+      <div class="chips" id="g_day"></div>
+    </div>
+    <div class="opt-group">
+      <div class="lbl">대상 학년</div>
+      <div class="chips" id="g_grade"></div>
+    </div>
+    <div class="opt-group">
+      <div class="lbl">분위기</div>
+      <div class="chips" id="g_mood"></div>
+    </div>
+    <div class="opt-group">
+      <div class="lbl">뽑을 카드 수</div>
+      <div class="chips" id="g_count"></div>
+    </div>
+
+    <button class="btn" onclick="draw()">✦  단서 카드 펼치기</button>
+  </div>
+
+  <div id="deck"><div class="empty">위 조건을 고르고 카드를 펼쳐 보세요.</div></div>
+
+</div>
+
+<script>
+/* ---- question bank, tied to curriculum themes ---- */
+const BANK={
+  light:[ // 가벼움
+    {q:"오늘 아침에 일어나서 가장 먼저 한 생각은?",tag:"가벼움"},
+    {q:"내 휴대폰 배경화면은 무엇이고, 왜 그것으로 했나요?",tag:"가벼움"},
+    {q:"무인도에 딱 세 가지만 가져갈 수 있다면?",tag:"가벼움"},
+    {q:"최근에 나를 가장 크게 웃게 한 일은?",tag:"가벼움"},
+    {q:"내가 가진 의외의 능력이나 취미 한 가지는?",tag:"가벼움"},
+    {q:"여름방학 하면 가장 먼저 떠오르는 한 단어는?",tag:"가벼움"},
+    {q:"우리 조 이름을 내 마음대로 짓는다면 뭐라고 할까?",tag:"가벼움"},
+    {q:"지금 가장 먹고 싶은 음식은? 이유도 함께!",tag:"가벼움"},
+  ],
+  warm:[ // 관계·마음
+    {q:"올해 나에게 가장 큰 힘이 되어준 사람은 누구인가요?",tag:"관계"},
+    {q:"친구에게 듣고 싶은 한마디가 있다면?",tag:"관계"},
+    {q:"요즘 내 마음의 날씨를 한 단어로 표현하면?",tag:"마음"},
+    {q:"최근에 누군가에게 고맙다고 말하고 싶었지만 못 한 적이 있나요?",tag:"관계"},
+    {q:"나를 가장 잘 아는 사람은 누구이고, 어떻게 그렇게 됐나요?",tag:"관계"},
+    {q:"이번 수련회에서 더 친해지고 싶은 사람이 있다면?",tag:"관계"},
+    {q:"힘들 때 나는 주로 어떻게 그 시간을 견디나요?",tag:"마음"},
+  ],
+  faith:[ // 신앙·하나님 (curriculum-linked)
+    {q:"'하나님의 방식'과 '세상의 방식'은 무엇이 다르다고 생각하나요?",tag:"신앙"},
+    {q:"학교에서 인정받으려면 무엇이 필요하다고 느끼나요?",tag:"세계관"},
+    {q:"하나님이 나를 어떤 기준으로 보신다고 생각하나요?",tag:"신앙"},
+    {q:"다니엘처럼 '아니요'라고 말하기 어려웠던 순간이 있었나요?",tag:"1일차"},
+    {q:"내가 가장 많이 의존하는 것은 무엇인가요? (성적·외모·관계 등)",tag:"2일차"},
+    {q:"'헛되다'고 느껴본 적이 있나요? 언제였나요?",tag:"2일차"},
+    {q:"이번 수련회에서 하나님께 가장 듣고 싶은 한마디는?",tag:"신앙"},
+    {q:"기도가 가장 잘 되는 순간은 언제인가요?",tag:"신앙"},
+    {q:"수련회가 끝나고 학교로 돌아갔을 때 바꾸고 싶은 것 하나는?",tag:"3일차"},
+  ],
+  deep:[ // 깊은 나눔
+    {q:"최근 1년 중 가장 무너졌던 순간과, 그때 붙잡았던 것은?",tag:"깊은나눔"},
+    {q:"아무에게도 말하지 못한 고민이 있다면, 그 무게는 어느 정도인가요?",tag:"깊은나눔"},
+    {q:"나는 지금 어느 왕국의 방식으로 살고 있다고 느끼나요?",tag:"깊은나눔"},
+    {q:"하나님을 신뢰하지 못하게 만드는 가장 큰 이유는 무엇인가요?",tag:"깊은나눔"},
+    {q:"내 인생을 그래프로 그린다면, 지금은 어디쯤일까요?",tag:"깊은나눔"},
+    {q:"용서하고 싶지만 아직 못 한 사람이나 일이 있나요?",tag:"깊은나눔"},
+  ]
+};
+
+const OPTS={
+  day:[['아무때나','all'],['1일차 — 첫 만남','d1'],['2일차 — 깊어지기','d2'],['3일차 — 파송','d3']],
+  grade:[['중등부','mid'],['고등부','high'],['전체','all']],
+  mood:[['아주 가볍게','light'],['따뜻하게','warm'],['신앙 나눔','faith'],['깊은 나눔','deep']],
+  count:[['3장','3'],['5장','5'],['7장','7']]
+};
+const state={day:'all',grade:'all',mood:'warm',count:'5'};
+
+function buildChips(key,elId){
+  const el=document.getElementById(elId);
+  OPTS[key].forEach(([label,val])=>{
+    const c=document.createElement('div');c.className='chip';c.textContent=label;
+    if(state[key]===val)c.classList.add('sel');
+    c.onclick=()=>{
+      state[key]=val;
+      [...el.children].forEach(ch=>ch.classList.remove('sel'));
+      c.classList.add('sel');
+    };
+    el.appendChild(c);
+  });
+}
+buildChips('day','g_day');
+buildChips('grade','g_grade');
+buildChips('mood','g_mood');
+buildChips('count','g_count');
+
+function pool(){
+  // mood decides primary pool; day nudges toward curriculum-linked faith Qs
+  let arr=[...BANK[state.mood]];
+  if(state.day!=='all'){
+    const dayTag={d1:'1일차',d2:'2일차',d3:'3일차'}[state.day];
+    const linked=BANK.faith.filter(x=>x.tag===dayTag);
+    arr=[...linked,...arr];
+  }
+  // light pool for younger crowd when mood is light/warm
+  if(state.grade==='mid' && (state.mood==='deep')){
+    arr=[...BANK.warm,...arr]; // soften深 for 중등부
+  }
+  return arr;
+}
+
+function draw(){
+  let p=pool();
+  // shuffle
+  for(let i=p.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[p[i],p[j]]=[p[j],p[i]];}
+  const n=Math.min(parseInt(state.count),p.length);
+  const picked=p.slice(0,n);
+  const deck=document.getElementById('deck');
+  deck.innerHTML=`<div class="deck-head">✉  펼쳐진 ${n}장의 단서</div>`;
+  picked.forEach((card,i)=>{
+    const el=document.createElement('div');el.className='qcard';
+    el.style.animationDelay=(i*0.09)+'s';
+    el.innerHTML=`
+      <div class="qc-top">
+        <span class="qc-num">CLUE ${String(i+1).padStart(2,'0')}</span>
+        <span class="qc-tag">${card.tag}</span>
+      </div>
+      <div class="qc-text">${card.q}</div>
+      <span class="qc-seal">— X를 찾아서</span>`;
+    deck.appendChild(el);
+  });
+  const again=document.createElement('button');
+  again.className='btn sm';again.textContent='↻  다시 뽑기';
+  again.style.marginTop='8px';again.onclick=draw;
+  deck.appendChild(again);
+  const pr=document.createElement('button');
+  pr.className='btn sm';pr.textContent='⎙  카드 인쇄하기';
+  pr.style.marginTop='8px';pr.onclick=()=>window.print();
+  deck.appendChild(pr);
+  deck.scrollIntoView({behavior:'smooth'});
+}
+</script>
+</body>
+</html>
